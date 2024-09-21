@@ -7,14 +7,10 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io::{self, Read};
-use thoth_cli::{
-    cli::{add_block, copy_block, delete_block, list_blocks, view_block},
-    EditorClipboard,
-};
-use thoth_cli::{
-    cli::{Cli, Commands},
-    ui_handler::{draw_ui, handle_input, UIState},
-};
+use thoth_cli::cli::{add_block, copy_block, delete_block, list_blocks, view_block, Cli, Commands};
+use thoth_cli::ui_handler::{draw_ui, handle_input, UIState};
+#[cfg(target_os = "linux")]
+use thoth_cli::EditorClipboard;
 
 use std::time::Duration;
 

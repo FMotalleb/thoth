@@ -1,23 +1,22 @@
 use anyhow::Result;
 use arboard::{Clipboard, Error};
+#[cfg(target_os = "linux")]
 use std::env;
+#[cfg(target_os = "linux")]
 use std::process;
-use std::sync::{Arc, Mutex};
 
+#[cfg(target_os = "linux")]
+use crate::DAEMONIZE_ARG;
 #[cfg(target_os = "linux")]
 use arboard::SetExtLinux;
 
-use crate::DAEMONIZE_ARG;
-
 pub struct EditorClipboard {
-    clipboard: Arc<Mutex<Clipboard>>,
+    clipboard: Clipboard,
 }
 
 impl EditorClipboard {
     pub fn new() -> Result<EditorClipboard, Error> {
-        Clipboard::new().map(|c| EditorClipboard {
-            clipboard: Arc::new(Mutex::new(c)),
-        })
+        Clipboard::new().map(|c| EditorClipboard { clipboard: c })
     }
 
     pub fn try_new() -> Option<EditorClipboard> {
@@ -28,11 +27,7 @@ impl EditorClipboard {
         #[cfg(target_os = "linux")]
         {
             if env::args().nth(1).as_deref() == Some(DAEMONIZE_ARG) {
-                let mut clipboard = self
-                    .clipboard
-                    .lock()
-                    .map_err(|_e| arboard::Error::ContentNotAvailable)?;
-                clipboard.set().wait().text(content)?;
+                self.clipboard.set().wait().text(content)?;
             } else {
                 process::Command::new(env::current_exe().unwrap())
                     .arg(DAEMONIZE_ARG)
@@ -48,22 +43,20 @@ impl EditorClipboard {
 
         #[cfg(not(target_os = "linux"))]
         {
-            let mut clipboard = self.clipboard.lock().unwrap();
-            clipboard.set_text(content)?;
+            self.clipboard.set_text(content)?;
         }
 
         Ok(())
     }
 
     pub fn get_content(&mut self) -> Result<String, Error> {
-        let mut clipboard = self.clipboard.lock().unwrap();
-        clipboard.get_text()
+        self.clipboard.get_text()
     }
 
     #[cfg(target_os = "linux")]
     pub fn handle_daemon_args() -> Result<(), Error> {
-        if let Some(content) = env::args().nth(2) {
-            if env::args().nth(1).as_deref() == Some(DAEMONIZE_ARG) {
+        if env::args().nth(1).as_deref() == Some(DAEMONIZE_ARG) {
+            if let Some(content) = env::args().nth(2) {
                 let mut clipboard = Self::new()?;
                 clipboard.set_contents(content)?;
                 std::process::exit(0);
